@@ -1,101 +1,240 @@
-import Image from "next/image";
+"use client";
+import { useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import SalesStats from "@/components/SalesStats";
+import Barchart from "@/components/Barchart";
 
-export default function Home() {
+interface Transaction {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  category: string;
+  sold: boolean;
+  image: string;
+  dateOfSale: string;
+}
+
+interface ApiResponse {
+  transactions: Transaction[];
+  total: number;
+  page: number;
+  perPage: number;
+}
+
+export default function TransactionDashboard() {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [total, setTotal] = useState(0);
+  const [perPage, setPerPage] = useState(10);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const seedDatabase = async () => {
+      try {
+        const response = await fetch("/api/seed", {
+          method: "GET",
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          console.log("Database seeding successful:", data.message);
+        } else {
+          console.error("Failed to seed database:", data.error);
+        }
+      } catch (error) {
+        console.error("Error calling seed API:", error);
+      }
+    };
+
+    seedDatabase();
+  }, []);
+
+  useEffect(() => {
+    fetchTransactions();
+  }, [currentPage, searchQuery, selectedMonth]);
+
+  const fetchTransactions = async () => {
+    try {
+      setLoading(true);
+      const queryParams = new URLSearchParams({
+        page: currentPage.toString(),
+        perPage: perPage.toString(),
+        search: searchQuery,
+      });
+
+      if (selectedMonth) {
+        const monthNumber =
+          new Date(Date.parse(`${selectedMonth} 1, 2024`)).getMonth() + 1;
+        queryParams.append("month", monthNumber.toString());
+      }
+
+      const response = await fetch(`/api/transcations?${queryParams}`);
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch transactions");
+      }
+
+      const data: ApiResponse = await response.json();
+      setTransactions(data.transactions);
+      setTotal(data.total);
+      setPerPage(data.perPage);
+      setError("");
+    } catch (err) {
+      setError("Failed to load transactions");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const totalPages = Math.ceil(total / perPage);
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div className="min-h-screen bg-[#e6f2ff] p-8">
+      <div className="max-w-5xl mx-auto bg-white rounded-lg shadow-lg p-6">
+        <h1 className="text-3xl font-bold text-center mb-8">
+          Transaction Dashboard
+        </h1>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+        {error && (
+          <div className="bg-red-100 text-red-700 p-3 rounded mb-4">
+            {error}
+          </div>
+        )}
+
+        <div className="flex justify-between mb-6">
+          <div className="relative">
+            <Input
+              type="text"
+              placeholder="Search transaction"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-4 py-2 border rounded-full bg-[#ffeeba] text-black placeholder-black"
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            <Search className="absolute left-3 top-2.5 h-5 w-5 text-black" />
+          </div>
+
+          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+            <SelectTrigger className="w-[180px] bg-[#ffeeba] text-black border-none">
+              <SelectValue placeholder="Select Month" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="January">Jan</SelectItem>
+              <SelectItem value="February">Feb</SelectItem>
+              <SelectItem value="March">Mar</SelectItem>
+              <SelectItem value="April">Apr</SelectItem>
+              <SelectItem value="May">May</SelectItem>
+              <SelectItem value="June">June</SelectItem>
+              <SelectItem value="July">July</SelectItem>
+              <SelectItem value="August">Aug</SelectItem>
+              <SelectItem value="September">Sep</SelectItem>
+              <SelectItem value="October">Oct</SelectItem>
+              <SelectItem value="November">Nov</SelectItem>
+              <SelectItem value="December">Dec</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-[#ffeeba]">
+                <TableHead className="text-black">ID</TableHead>
+                <TableHead className="text-black">Title</TableHead>
+                <TableHead className="text-black">Description</TableHead>
+                <TableHead className="text-black">Price</TableHead>
+                <TableHead className="text-black">Category</TableHead>
+                <TableHead className="text-black">Sold</TableHead>
+                <TableHead className="text-black">Image</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-4">
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="w-4 h-4 bg-[#ffeeba] rounded-full animate-bounce" />
+                      <div className="w-4 h-4 bg-[#ffeeba] rounded-full animate-bounce delay-100" />
+                      <div className="w-4 h-4 bg-[#ffeeba] rounded-full animate-bounce delay-200" />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : transactions.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-4">
+                    {searchQuery
+                      ? "No matching transactions found"
+                      : "No transactions available"}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                transactions.map((transaction) => (
+                  <TableRow key={transaction.id} className="bg-[#fff9e6]">
+                    <TableCell>{transaction.id}</TableCell>
+                    <TableCell>{transaction.title}</TableCell>
+                    <TableCell>{transaction.description}</TableCell>
+                    <TableCell>${transaction.price}</TableCell>
+                    <TableCell>{transaction.category}</TableCell>
+                    <TableCell>{transaction.sold ? "Yes" : "No"}</TableCell>
+                    <TableCell>{transaction.image}</TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        <div className="flex justify-between items-center mt-4">
+          <div>Page No: {currentPage}</div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1 || loading}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setCurrentPage(Math.min(totalPages, currentPage + 1))
+              }
+              disabled={currentPage === totalPages || loading}
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          <div>Per Page: {perPage}</div>
+        </div>
+      </div>
+      <SalesStats month={selectedMonth} />
+      <Barchart month={selectedMonth} />
     </div>
   );
 }

@@ -1,3 +1,13 @@
+export interface PriceRange {
+  range: string;
+  count: number;
+}
+
+export interface CategoryStat {
+  category: string;
+  count: number;
+}
+
 export interface CombinedStatsResponse {
   status: "success" | "error";
   data?: {

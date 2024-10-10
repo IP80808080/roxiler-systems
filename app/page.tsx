@@ -118,7 +118,7 @@ export default function TransactionDashboard() {
         <h1 className="text-3xl font-bold text-center mb-8">
           Transaction Dashboard
         </h1>
-        <p className="text-xl">by Kamlesh S. Kasambe</p>
+        
 
         {error && (
           <div className="bg-red-100 text-red-700 p-3 rounded mb-4">
